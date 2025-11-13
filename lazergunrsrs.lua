@@ -24,7 +24,7 @@ local last_equipped = false;
 
 -- // === TOKINU HUB GUI (INFO TEXT WAY BELOW) ===
 local screen_gui = Instance.new("ScreenGui");
-screen_gui.Name = "Tokinu Hub";
+screen_gui.Name = "Cofizin Lazer Gun";
 screen_gui.Parent = local_player:WaitForChild("PlayerGui");
 
 local frame = Instance.new("Frame");
@@ -215,4 +215,5 @@ run_service.RenderStepped:Connect(function()
     local direction = (pos2 - pos1).Unit
     local id = http_service:GenerateGUID(false):lower():gsub("%-", "")
     remote:FireServer(id, pos1, direction, workspace:GetServerTimeNow())
+
 end)
