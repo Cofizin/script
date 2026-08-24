@@ -1,86 +1,71 @@
--- Script para botão flutuante com flood do remote gamemodes/join
--- TOGGLE CORRIGIDO - Ativar e Desativar
+-- Script para botão flutuante com flood de remote (ATIVAÇÃO AUTOMÁTICA)
+-- ⚠️ ATENÇÃO: Este script começa a floodar IMEDIATAMENTE ao ser executado!
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
+local mouse = player:GetMouse()
 
 -- Configurações do remote
 local Event = game:GetService("ReplicatedStorage").Shared.Packages.Events.RemoteEvent
 local floodData = {
     {
         Params = {
-            "DemonCastle:4_3412615506"
+            "Power"
         },
-        Path = "gamemodes/join"
+        Path = "guild/purchaseBoost"
     }
 }
 
 -- Variáveis de controle
-local isActive = false
+local isActive = true  -- MUDADO: Começa ativo!
 local floodCoroutine = nil
 local button = nil
 local screenGui = nil
-local floodCount = 0
+local isFlooding = false
 
 -- Função para criar o botão flutuante
 local function createFloatingButton()
-    -- Criar ScreenGui
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "FloodButtonGUI"
     screenGui.Parent = player.PlayerGui
     screenGui.ResetOnSpawn = false
     
-    -- Criar botão principal
     button = Instance.new("ImageButton")
     button.Name = "FloodButton"
     button.Size = UDim2.new(0, 80, 0, 80)
     button.Position = UDim2.new(0, 20, 0, 100)
-    button.BackgroundColor3 = Color3.new(0, 0, 0)
+    button.BackgroundColor3 = Color3.new(1, 0, 0) -- MUDADO: Começa vermelho (ativo)
     button.BackgroundTransparency = 0
     button.BorderSizePixel = 0
     button.AutoButtonColor = false
     
-    -- Deixar redondo
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(1, 0)
     corner.Parent = button
     
-    -- Texto do botão
     local buttonText = Instance.new("TextLabel")
     buttonText.Name = "ButtonText"
     buttonText.Size = UDim2.new(1, 0, 1, 0)
     buttonText.Position = UDim2.new(0, 0, 0, 0)
     buttonText.BackgroundTransparency = 1
-    buttonText.Text = "▶"
+    buttonText.Text = "⏹"  -- MUDADO: Começa com símbolo de "parar"
     buttonText.TextColor3 = Color3.new(1, 1, 1)
     buttonText.TextSize = 35
     buttonText.Font = Enum.Font.SourceSansBold
+    buttonText.TextScaled = false
     buttonText.Parent = button
     
-    -- Contador de floods enviados
-    local counterLabel = Instance.new("TextLabel")
-    counterLabel.Name = "CounterLabel"
-    counterLabel.Size = UDim2.new(1, 0, 0, 20)
-    counterLabel.Position = UDim2.new(0, 0, 1, 5)
-    counterLabel.BackgroundTransparency = 1
-    counterLabel.Text = "0"
-    counterLabel.TextColor3 = Color3.new(1, 1, 1)
-    counterLabel.TextSize = 14
-    counterLabel.Font = Enum.Font.SourceSansBold
-    counterLabel.TextScaled = true
-    counterLabel.Parent = button
-    
-    -- Efeito de brilho
     local glow = Instance.new("ImageLabel")
     glow.Name = "Glow"
-    glow.Size = UDim2.new(1.4, 0, 1.4, 0)
-    glow.Position = UDim2.new(-0.2, 0, -0.2, 0)
+    glow.Size = UDim2.new(1.3, 0, 1.3, 0)
+    glow.Position = UDim2.new(-0.15, 0, -0.15, 0)
     glow.BackgroundTransparency = 1
     glow.Image = "rbxassetid://5553946656"
-    glow.ImageTransparency = 0.9
+    glow.ImageTransparency = 0.4  -- MUDADO: Brilho ativo
     glow.ZIndex = 0
     glow.Parent = button
     
@@ -117,238 +102,179 @@ local function createFloatingButton()
         end
     end)
     
+    button.MouseButton1Click:Connect(function()
+        toggleFlood()
+    end)
+    
     return button
 end
 
--- Função para fazer flood (USANDO COROUTINE)
-local function floodLoop()
+-- Função para fazer flood do remote
+local function startFlood()
+    isFlooding = true
     floodCoroutine = coroutine.create(function()
-        while isActive do  -- Verifica se está ativo a cada loop
-            if not isActive then
-                break  -- Sai do loop se desativado
-            end
-            
+        while isFlooding and isActive do
             local success, err = pcall(function()
                 Event:FireServer(floodData)
-                floodCount = floodCount + 1
-                
-                -- Atualizar contador
-                local counter = button:FindFirstChild("CounterLabel")
-                if counter then
-                    counter.Text = tostring(floodCount)
-                end
-                
-                print(string.format("[FLOOD] Enviado #%d - %s", floodCount, os.time()))
+                print("🔥 Flood enviado:", os.time())
             end)
             
             if not success then
-                warn("[FLOOD] Erro:", err)
+                warn("Erro ao enviar flood:", err)
             end
             
-            -- Esperar 5 segundos
             task.wait(5)
-        end
-        
-        -- Quando sair do loop, garantir que está desativado
-        if not isActive then
-            print("[FLOOD] Loop finalizado - Desativado")
         end
     end)
     
     coroutine.resume(floodCoroutine)
 end
 
--- Função para ATIVAR o flood
-local function activateFlood()
-    if isActive then return end  -- Já está ativo
-    
-    print("🔴 ATIVANDO FLOOD...")
-    isActive = true
-    floodCount = 0
-    
-    -- Resetar contador
-    local counter = button:FindFirstChild("CounterLabel")
-    if counter then
-        counter.Text = "0"
+-- Função para parar o flood
+local function stopFlood()
+    isFlooding = false
+    if floodCoroutine then
+        floodCoroutine = nil
     end
-    
-    -- Mudar cor para vermelho
-    local tween = TweenService:Create(button, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-        BackgroundColor3 = Color3.new(1, 0, 0)
-    })
-    tween:Play()
-    
-    -- Mudar texto
-    local text = button:FindFirstChild("ButtonText")
-    if text then
-        text.Text = "⏹"
-        text.TextColor3 = Color3.new(1, 1, 1)
-    end
-    
-    -- Efeito de brilho
-    local glow = button:FindFirstChild("Glow")
-    if glow then
-        local tween2 = TweenService:Create(glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-            ImageTransparency = 0.3
-        })
-        tween2:Play()
-    end
-    
-    -- Iniciar flood
-    floodLoop()
-    showNotification("🔴 FLOOD ATIVADO", "Enviando a cada 5 segundos")
 end
 
--- Função para DESATIVAR o flood
-local function deactivateFlood()
-    if not isActive then return end  -- Já está desativado
-    
-    print("⚫ DESATIVANDO FLOOD...")
-    isActive = false
-    
-    -- Aguardar a coroutine finalizar
-    task.wait(0.1)
-    
-    -- Mudar cor para preto
-    local tween = TweenService:Create(button, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-        BackgroundColor3 = Color3.new(0, 0, 0)
-    })
-    tween:Play()
-    
-    -- Mudar texto
-    local text = button:FindFirstChild("ButtonText")
-    if text then
-        text.Text = "▶"
-        text.TextColor3 = Color3.new(1, 1, 1)
-    end
-    
-    -- Remover brilho
-    local glow = button:FindFirstChild("Glow")
-    if glow then
-        local tween2 = TweenService:Create(glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-            ImageTransparency = 0.9
-        })
-        tween2:Play()
-    end
-    
-    local totalSent = floodCount
-    print(string.format("⚫ FLOOD DESATIVADO - Total enviado: %d", totalSent))
-    showNotification("⚫ FLOOD DESATIVADO", string.format("Total: %d enviados", totalSent))
-end
-
--- Função para ALTERNAR (TOGGLE)
+-- Função para alternar o estado do flood
 local function toggleFlood()
     if not button then return end
     
-    print("🔄 Alternando estado... Atual:", isActive)
+    isActive = not isActive
     
     if isActive then
-        deactivateFlood()
+        -- ATIVADO - Botão vermelho
+        local tween = TweenService:Create(button, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+            BackgroundColor3 = Color3.new(1, 0, 0)
+        })
+        tween:Play()
+        
+        local text = button:FindFirstChild("ButtonText")
+        if text then
+            text.Text = "⏹"
+            text.TextColor3 = Color3.new(1, 1, 1)
+        end
+        
+        local glow = button:FindFirstChild("Glow")
+        if glow then
+            local tween2 = TweenService:Create(glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+                ImageTransparency = 0.4
+            })
+            tween2:Play()
+        end
+        
+        startFlood()
+        print("🔴 Flood ATIVADO!")
+        showNotification("🔴 FLOOD ATIVADO", "Enviando a cada 5 segundos")
+        
     else
-        activateFlood()
+        -- DESATIVADO - Botão preto
+        local tween = TweenService:Create(button, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+            BackgroundColor3 = Color3.new(0, 0, 0)
+        })
+        tween:Play()
+        
+        local text = button:FindFirstChild("ButtonText")
+        if text then
+            text.Text = "▶"
+            text.TextColor3 = Color3.new(1, 1, 1)
+        end
+        
+        local glow = button:FindFirstChild("Glow")
+        if glow then
+            local tween2 = TweenService:Create(glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+                ImageTransparency = 0.8
+            })
+            tween2:Play()
+        end
+        
+        stopFlood()
+        print("⚫ Flood DESATIVADO!")
+        showNotification("⚫ FLOOD DESATIVADO", "Envio interrompido")
     end
 end
 
 -- Função para mostrar notificação
 local function showNotification(title, message)
-    local notif = Instance.new("Frame")
-    notif.Size = UDim2.new(0, 320, 0, 70)
-    notif.Position = UDim2.new(0.5, -160, 0.5, -150)
+    local notif = Instance.new("TextLabel")
+    notif.Size = UDim2.new(0, 300, 0, 60)
+    notif.Position = UDim2.new(0.5, -150, 0.5, -100)
     notif.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
-    notif.BackgroundTransparency = 0.2
+    notif.BackgroundTransparency = 0.3
+    notif.TextColor3 = Color3.new(1, 1, 1)
+    notif.Text = title .. "\n" .. message
+    notif.TextSize = 16
+    notif.Font = Enum.Font.SourceSansBold
+    notif.TextWrapped = true
     notif.BorderSizePixel = 0
+    notif.ClipsDescendants = true
+    notif.TextStrokeTransparency = 0.5
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
+    corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = notif
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    titleLabel.Position = UDim2.new(0, 0, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title
-    titleLabel.TextColor3 = Color3.new(1, 1, 1)
-    titleLabel.TextSize = 18
-    titleLabel.Font = Enum.Font.SourceSansBold
-    titleLabel.Parent = notif
-    
-    local msgLabel = Instance.new("TextLabel")
-    msgLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    msgLabel.Position = UDim2.new(0, 0, 0.5, 0)
-    msgLabel.BackgroundTransparency = 1
-    msgLabel.Text = message
-    msgLabel.TextColor3 = Color3.new(0.7, 0.7, 0.7)
-    msgLabel.TextSize = 14
-    msgLabel.Font = Enum.Font.SourceSans
-    msgLabel.Parent = notif
     
     notif.Parent = screenGui
     
     notif.BackgroundTransparency = 1
-    local tween = TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-        BackgroundTransparency = 0.2
+    local tween = TweenService:Create(notif, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
+        BackgroundTransparency = 0.3
     })
     tween:Play()
     
     task.wait(2)
-    local tween2 = TweenService:Create(notif, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+    local tween2 = TweenService:Create(notif, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
         BackgroundTransparency = 1
     })
     tween2:Play()
-    task.wait(0.3)
+    task.wait(0.5)
     notif:Destroy()
 end
 
--- Função para limpar
+-- Função para limpar tudo
 local function cleanup()
     if isActive then
+        stopFlood()
         isActive = false
-    end
-    if floodCoroutine then
-        floodCoroutine = nil
     end
     if screenGui then
         screenGui:Destroy()
     end
 end
 
--- Inicializar
+-- Criar o botão quando o jogador entrar
 local function initialize()
     if player and player.PlayerGui then
         createFloatingButton()
-        
-        -- Conectar o clique do botão
-        if button then
-            button.MouseButton1Click:Connect(function()
-                print("🔘 Botão clicado!")
-                toggleFlood()
-            end)
-        end
+        -- INICIA O FLOOD AUTOMATICAMENTE!
+        task.wait(0.5)  -- Pequeno delay para garantir que o botão foi criado
+        startFlood()
+        print("🚀 Flood iniciado AUTOMATICAMENTE!")
+        showNotification("🚀 FLOOD AUTOMÁTICO", "Executando a cada 5 segundos")
     end
 end
 
+-- Inicializar
 initialize()
 
--- Limpeza
+-- Limpeza quando o jogador sair
 player:GetPropertyChangedSignal("Parent"):Connect(function()
     if not player.Parent then
         cleanup()
     end
 end)
 
--- Atalho de teclado (F)
+-- Atalho de teclado (F para ativar/desativar)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
     if input.KeyCode == Enum.KeyCode.F then
-        print("⌨️ Tecla F pressionada!")
         toggleFlood()
     end
 end)
 
-print("✅ FLOOD SCRIPT CARREGADO!")
-print("📌 Remote: gamemodes/join")
-print("📌 Params: DemonCastle:4_3412615506")
-print("🔄 Clique no botão ou pressione F para ATIVAR/DESATIVAR")
-print("🎨 Preto (▶) = Desativado | Vermelho (⏹) = Ativado")
-print("📊 Estado atual: DESATIVADO")
+print("✅ Script carregado! Flood INICIADO AUTOMATICAMENTE!")
+print("🔄 Pressione F ou clique no botão para parar/iniciar.")
+print("🎨 Botão vermelho = ativado | Botão preto = desativado")
