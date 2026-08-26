@@ -1,4 +1,4 @@
--- Script para botão flutuante com Auto Exchange (5 remotes)
+-- Script para botão flutuante com ALL REMOTES FLOOD
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -7,114 +7,182 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
 
--- Configurações do remote para EXCHANGE
+-- Configurações do remote
 local Event = game:GetService("ReplicatedStorage").Shared.Packages.Events.RemoteEvent
 
--- Lista de trocas para fazer (em ordem)
+-- ===== LISTA DE REMOTES =====
+
+-- 1. TROCAS DE FRAGMENTOS (30 unidades cada) - 3 vezes por segundo
 local exchanges = {
     {
-        Params = {"HakiFragment", "BlessingShard", 10},
+        Params = {"HakiFragment", "BlessingShard", 30},
         Path = "shard-exchange/exchange"
     },
     {
-        Params = {"DoujutsuFragment", "BlessingShard", 10},
+        Params = {"DoujutsuFragment", "BlessingShard", 30},
         Path = "shard-exchange/exchange"
     },
     {
-        Params = {"AuraFragment", "BlessingShard", 10},
+        Params = {"AuraFragment", "BlessingShard", 30},
         Path = "shard-exchange/exchange"
     },
     {
-        Params = {"RaceFragment", "BlessingShard", 10},
+        Params = {"RaceFragment", "BlessingShard", 30},
         Path = "shard-exchange/exchange"
     },
     {
-        Params = {"HunterFragment", "BlessingShard", 10},
+        Params = {"HunterFragment", "BlessingShard", 30},
         Path = "shard-exchange/exchange"
     }
 }
 
--- Variáveis de controle
+-- 2. CRAFT DE POÇÕES - 1 vez por segundo cada
+local crafts = {
+    {
+        Params = {"FortuneTalisman", 1},
+        Path = "consumable-crafting/craft"
+    },
+    {
+        Params = {"DraconicEssence", 1},
+        Path = "consumable-crafting/craft"
+    },
+    {
+        Params = {"VitalBean", 1},
+        Path = "consumable-crafting/craft"
+    }
+}
+
+-- 3. BOOST DE GUILDA - 1 vez a cada 5 segundos
+local boost = {
+    Params = {"Power"},
+    Path = "guild/purchaseBoost"
+}
+
+-- ===== CONTROLE =====
+
 local isActive = false
-local exchangeCoroutine = nil
+local floodCoroutine = nil
 local button = nil
 local screenGui = nil
-local isExchanging = false
-local totalExchanged = 0
-local currentExchangeIndex = 1
+local totalActions = 0
 
--- Função para fazer uma troca
+-- Função para fazer uma troca de fragmento
 local function doExchange(exchangeData)
     local success, err = pcall(function()
         Event:FireServer({exchangeData})
     end)
     
     if success then
-        totalExchanged = totalExchanged + 1
+        totalActions = totalActions + 1
         local fragment = exchangeData.Params[1]
-        print("✅ Trocou: " .. fragment .. " (Total: " .. totalExchanged .. ")")
+        print("✅ Trocou: " .. fragment .. " x30 (Total: " .. totalActions .. ")")
         return true
     else
-        warn("❌ Erro ao trocar: " .. tostring(err))
+        warn("❌ Erro na troca: " .. tostring(err))
         return false
     end
 end
 
--- Função para fazer a próxima troca (1 por vez)
-local function doNextExchange()
-    if not isActive or isExchanging then return end
+-- Função para fazer um craft
+local function doCraft(craftData)
+    local success, err = pcall(function()
+        Event:FireServer({craftData})
+    end)
     
-    isExchanging = true
-    
-    -- Pega a troca atual
-    local exchangeData = exchanges[currentExchangeIndex]
-    
-    -- Tenta fazer a troca
-    doExchange(exchangeData)
-    
-    -- Avança para a próxima troca
-    currentExchangeIndex = currentExchangeIndex + 1
-    if currentExchangeIndex > #exchanges then
-        currentExchangeIndex = 1
+    if success then
+        totalActions = totalActions + 1
+        local potion = craftData.Params[1]
+        print("✅ Craftou: " .. potion .. " (Total: " .. totalActions .. ")")
+        return true
+    else
+        warn("❌ Erro no craft: " .. tostring(err))
+        return false
     end
-    
-    -- Aguarda o cooldown de 1 segundo
-    task.wait(1)
-    
-    isExchanging = false
 end
 
--- Função para iniciar o exchange
-local function startExchange()
-    isExchanging = false
-    totalExchanged = 0
-    currentExchangeIndex = 1
+-- Função para fazer o boost de guild
+local function doBoost()
+    local success, err = pcall(function()
+        Event:FireServer({boost})
+    end)
     
-    exchangeCoroutine = coroutine.create(function()
+    if success then
+        totalActions = totalActions + 1
+        print("✅ Boost de Guilda ativado! (Total: " .. totalActions .. ")")
+        return true
+    else
+        warn("❌ Erro no boost: " .. tostring(err))
+        return false
+    end
+end
+
+-- Função principal de flood
+local function startFlood()
+    floodCoroutine = coroutine.create(function()
+        local exchangeIndex = 1
+        local craftIndex = 1
+        local boostTimer = 0
+        
         while isActive do
-            if not isExchanging then
-                doNextExchange()
+            -- === TROCAS DE FRAGMENTOS (3 vezes por segundo) ===
+            for i = 1, 3 do
+                if not isActive then break end
+                
+                local exchangeData = exchanges[exchangeIndex]
+                doExchange(exchangeData)
+                
+                -- Avança para próxima troca
+                exchangeIndex = exchangeIndex + 1
+                if exchangeIndex > #exchanges then
+                    exchangeIndex = 1
+                end
+                
+                -- Pequeno delay entre as 3 trocas por segundo
+                if i < 3 then
+                    task.wait(0.15) -- ~0.15s entre cada troca (3 por segundo)
+                end
             end
-            -- Pequeno delay para não sobrecarregar
-            task.wait(0.1)
+            
+            if not isActive then break end
+            
+            -- === CRAFTS (1 vez por segundo cada) ===
+            local craftData = crafts[craftIndex]
+            doCraft(craftData)
+            
+            -- Avança para próximo craft
+            craftIndex = craftIndex + 1
+            if craftIndex > #crafts then
+                craftIndex = 1
+            end
+            
+            if not isActive then break end
+            
+            -- === BOOST DE GUILDA (1 vez a cada 5 segundos) ===
+            boostTimer = boostTimer + 1
+            if boostTimer >= 5 then
+                doBoost()
+                boostTimer = 0
+            end
+            
+            -- Aguarda 1 segundo antes do próximo ciclo
+            task.wait(1)
         end
     end)
     
-    coroutine.resume(exchangeCoroutine)
-    print("🔴 Auto Exchange ATIVADO!")
+    coroutine.resume(floodCoroutine)
+    print("🔴 ALL REMOTES ATIVADOS!")
 end
 
--- Função para parar o exchange
-local function stopExchange()
-    isExchanging = false
-    if exchangeCoroutine then
-        exchangeCoroutine = nil
+-- Função para parar o flood
+local function stopFlood()
+    if floodCoroutine then
+        floodCoroutine = nil
     end
-    print("⚫ Auto Exchange DESATIVADO! Total de trocas: " .. totalExchanged)
+    print("⚫ ALL REMOTES DESATIVADOS! Total de ações: " .. totalActions)
 end
 
--- Função para alternar o estado do exchange
-local function toggleExchange()
+-- Função para alternar o estado
+local function toggleFlood()
     if not button then return end
     
     isActive = not isActive
@@ -122,18 +190,16 @@ local function toggleExchange()
     if isActive then
         -- ATIVADO - Botão vermelho
         local tween = TweenService:Create(button, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = Color3.new(1, 0, 0) -- Vermelho
+            BackgroundColor3 = Color3.new(1, 0, 0)
         })
         tween:Play()
         
-        -- Mudar texto
         local text = button:FindFirstChild("ButtonText")
         if text then
             text.Text = "⏹"
             text.TextColor3 = Color3.new(1, 1, 1)
         end
         
-        -- Mudar brilho
         local glow = button:FindFirstChild("Glow")
         if glow then
             local tween2 = TweenService:Create(glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
@@ -142,27 +208,23 @@ local function toggleExchange()
             tween2:Play()
         end
         
-        -- Iniciar exchange
-        startExchange()
-        
-        -- Notificação
-        showNotification("🔴 EXCHANGE ATIVADO", "Trocando fragmentos a cada 1s")
+        totalActions = 0
+        startFlood()
+        showNotification("🔴 ALL REMOTES ATIVOS", "Flood em andamento...")
         
     else
         -- DESATIVADO - Botão preto
         local tween = TweenService:Create(button, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = Color3.new(0, 0, 0) -- Preto
+            BackgroundColor3 = Color3.new(0, 0, 0)
         })
         tween:Play()
         
-        -- Mudar texto
         local text = button:FindFirstChild("ButtonText")
         if text then
             text.Text = "▶"
             text.TextColor3 = Color3.new(1, 1, 1)
         end
         
-        -- Mudar brilho
         local glow = button:FindFirstChild("Glow")
         if glow then
             local tween2 = TweenService:Create(glow, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
@@ -171,38 +233,31 @@ local function toggleExchange()
             tween2:Play()
         end
         
-        -- Parar exchange
-        stopExchange()
-        
-        -- Notificação
-        showNotification("⚫ EXCHANGE DESATIVADO", "Total: " .. totalExchanged .. " trocas")
+        stopFlood()
+        showNotification("⚫ ALL REMOTES DESATIVADOS", "Total: " .. totalActions .. " ações")
     end
 end
 
 -- Função para criar o botão flutuante
 local function createFloatingButton()
-    -- Criar ScreenGui
     screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "ExchangeButtonGUI"
+    screenGui.Name = "AllRemotesGUI"
     screenGui.Parent = player.PlayerGui
     screenGui.ResetOnSpawn = false
     
-    -- Criar botão
     button = Instance.new("ImageButton")
-    button.Name = "ExchangeButton"
+    button.Name = "AllRemotesButton"
     button.Size = UDim2.new(0, 80, 0, 80)
     button.Position = UDim2.new(0, 20, 0, 100)
-    button.BackgroundColor3 = Color3.new(0, 0, 0) -- Preto
+    button.BackgroundColor3 = Color3.new(0, 0, 0)
     button.BackgroundTransparency = 0
     button.BorderSizePixel = 0
     button.AutoButtonColor = false
     
-    -- Criar borda arredondada
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(1, 0)
     corner.Parent = button
     
-    -- Texto do botão
     local buttonText = Instance.new("TextLabel")
     buttonText.Name = "ButtonText"
     buttonText.Size = UDim2.new(1, 0, 1, 0)
@@ -215,7 +270,6 @@ local function createFloatingButton()
     buttonText.TextScaled = false
     buttonText.Parent = button
     
-    -- Adicionar sombra/brilho
     local glow = Instance.new("ImageLabel")
     glow.Name = "Glow"
     glow.Size = UDim2.new(1.3, 0, 1.3, 0)
@@ -228,7 +282,7 @@ local function createFloatingButton()
     
     button.Parent = screenGui
     
-    -- Tornar o botão arrastável
+    -- Arrastável
     local dragging = false
     local dragStart = nil
     local startPos = nil
@@ -259,9 +313,8 @@ local function createFloatingButton()
         end
     end)
     
-    -- Função do botão
     button.MouseButton1Click:Connect(function()
-        toggleExchange()
+        toggleFlood()
     end)
     
     return button
@@ -289,14 +342,12 @@ local function showNotification(title, message)
     
     notif.Parent = screenGui
     
-    -- Animação de fade in
     notif.BackgroundTransparency = 1
     local tween = TweenService:Create(notif, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
         BackgroundTransparency = 0.3
     })
     tween:Play()
     
-    -- Remover após 2 segundos
     task.wait(2)
     local tween2 = TweenService:Create(notif, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {
         BackgroundTransparency = 1
@@ -309,7 +360,7 @@ end
 -- Função para limpar tudo
 local function cleanup()
     if isActive then
-        stopExchange()
+        stopFlood()
         isActive = false
     end
     if screenGui then
@@ -317,34 +368,32 @@ local function cleanup()
     end
 end
 
--- Criar o botão quando o jogador entrar
+-- Inicializar
 local function initialize()
     if player and player.PlayerGui then
         createFloatingButton()
     end
 end
 
--- Inicializar
 initialize()
 
--- Limpeza quando o jogador sair
+-- Limpeza
 player:GetPropertyChangedSignal("Parent"):Connect(function()
     if not player.Parent then
         cleanup()
     end
 end)
 
--- Atalho de teclado (F para ativar/desativar)
+-- Atalho de teclado (F)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    
     if input.KeyCode == Enum.KeyCode.F then
-        toggleExchange()
+        toggleFlood()
     end
 end)
 
-print("✅ Auto Exchange carregado! Botão flutuante criado.")
-print("🔄 Pressione F para ativar/desativar ou clique no botão.")
-print("🎨 Botão preto = desativado | Botão vermelho = ativado")
-print("📦 Trocando: HakiFragment → DoujutsuFragment → AuraFragment → RaceFragment → HunterFragment")
-print("⏱️ Cooldown de 1 segundo entre cada troca")
+print("✅ ALL REMOTES FLOOD carregado!")
+print("🔄 Pressione F para ativar/desativar")
+print("📦 Trocas: 5 fragmentos x30 (3x/segundo)")
+print("🔧 Crafts: 3 poções (1x/segundo cada)")
+print("⚡ Boost: Guild Power (1x a cada 5 segundos)")
