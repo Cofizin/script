@@ -1,4 +1,4 @@
--- Cofizin Utilities - UI Corrigida (Apenas 2 Tabs)
+-- Cofizin Utilities - Com Destroy Completo
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxyHubDev/Gold/refs/heads/main/src/lib/load"))()
 local Lib = Library.new()
 
@@ -55,6 +55,7 @@ local boost = {Params = {"Power"}, Path = "guild/purchaseBoost"}
 
 -- ===== LOOPS =====
 local loops = { trade = nil, craft = nil, boost = nil }
+local isDestroyed = false
 
 -- ===== FUNÇÃO PARA VERIFICAR SE UM SHARD ESTÁ SELECIONADO =====
 local function isShardSelected(shardName)
@@ -68,12 +69,12 @@ end
 
 -- ===== FUNÇÕES =====
 local function doExchange(shardToTrade)
+    if isDestroyed then return false end
     if shardToTrade == targetShard then return false end
     if not isShardSelected(shardToTrade) then 
         return false 
     end
     
-    local exchangeData = {Params = {shardToTrade, targetShard, 10}, Path = "shard-exchange/exchange"}
     local success, err = pcall(function()
         Event:FireServer({exchangeData})
     end)
@@ -86,6 +87,7 @@ local function doExchange(shardToTrade)
 end
 
 local function doCraft(craftData)
+    if isDestroyed then return false end
     local success, err = pcall(function()
         Event:FireServer({craftData})
     end)
@@ -98,6 +100,7 @@ local function doCraft(craftData)
 end
 
 local function doBoost()
+    if isDestroyed then return false end
     local success, err = pcall(function()
         Event:FireServer({boost})
     end)
@@ -112,6 +115,7 @@ end
 -- ===== LOOPS =====
 
 local function startTradeLoop()
+    if isDestroyed then return end
     if loops.trade then return end
     states.trade = true
     
@@ -132,7 +136,7 @@ local function startTradeLoop()
     
     local index = 1
     loops.trade = coroutine.create(function()
-        while states.trade do
+        while states.trade and not isDestroyed do
             local shard = shardsToTrade[index]
             doExchange(shard)
             index = index + 1
@@ -149,12 +153,13 @@ local function stopTradeLoop()
 end
 
 local function startCraftLoop()
+    if isDestroyed then return end
     if loops.craft then return end
     states.craft = true
     
     loops.craft = coroutine.create(function()
         local index = 1
-        while states.craft do
+        while states.craft and not isDestroyed do
             doCraft(crafts[index])
             index = index + 1
             if index > #crafts then index = 1 end
@@ -170,11 +175,12 @@ local function stopCraftLoop()
 end
 
 local function startBoostLoop()
+    if isDestroyed then return end
     if loops.boost then return end
     states.boost = true
     
     loops.boost = coroutine.create(function()
-        while states.boost do
+        while states.boost and not isDestroyed do
             doBoost()
             task.wait(5)
         end
@@ -189,6 +195,7 @@ end
 
 -- ===== TOGGLES =====
 local function toggleTrade()
+    if isDestroyed then return end
     if states.trade then 
         stopTradeLoop() 
     else 
@@ -197,11 +204,39 @@ local function toggleTrade()
 end
 
 local function toggleCraft()
+    if isDestroyed then return end
     if states.craft then stopCraftLoop() else startCraftLoop() end
 end
 
 local function toggleBoost()
+    if isDestroyed then return end
     if states.boost then stopBoostLoop() else startBoostLoop() end
+end
+
+-- ===== FUNÇÃO DE DESTROY COMPLETO =====
+local function destroyAll()
+    if isDestroyed then return end
+    isDestroyed = true
+    
+    -- Parar todos os loops
+    states.trade = false
+    states.craft = false
+    states.boost = false
+    
+    loops.trade = nil
+    loops.craft = nil
+    loops.boost = nil
+    
+    -- Destruir a GUI
+    if Window then
+        Window:Destroy()
+    end
+    
+    -- Limpar variáveis
+    selectedShardsList = {}
+    totalCounts = { trade = 0, craft = 0, boost = 0 }
+    
+    print("🗑️ Cofizin Utilities destruído completamente!")
 end
 
 -- ===== UI =====
@@ -247,6 +282,7 @@ local shardDropdown = TradeGroup:CreateDropdown({
         FighterPassiveShard = false,
     },
     Callback = function(values)
+        if isDestroyed then return end
         selectedShardsList = {}
         for shardName, isSelected in pairs(values) do
             if isSelected then
@@ -282,6 +318,7 @@ TradeGroup:CreateDropdown({
     Placeholder = "Select Target...",
     Default = "FighterPassiveShard",
     Callback = function(value)
+        if isDestroyed then return end
         targetShard = value
         for i = #selectedShardsList, 1, -1 do
             if selectedShardsList[i] == targetShard then
@@ -366,15 +403,16 @@ InfoGroup:CreateParagraph({
 
 InfoGroup:CreateButton({
     Title = "Close GUI",
-    Description = "Destroy UI",
+    Description = "Destroy UI and stop all remotes",
     Callback = function()
-        Window:Destroy()
+        destroyAll()
     end,
 })
 
 -- ===== ATUALIZAR TOTAIS =====
 task.spawn(function()
     while task.wait(1) do
+        if isDestroyed then break end
         pcall(function()
             for _, child in pairs(MainTab:GetChildren()) do
                 if child:IsA("Group") and child.Title == "Auto Trade Shard" then
@@ -406,3 +444,4 @@ end)
 print("✅ Cofizin Utilities carregado!")
 print("📦 APENAS os shards marcados serão trocados")
 print("🎯 O shard destino NÃO será trocado")
+print("🗑️ Clique em 'Close GUI' para destruir completamente")
