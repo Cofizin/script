@@ -1,4 +1,4 @@
--- Cofizin Utilities - Com Destroy Completo
+-- Cofizin Utilities - CORRIGIDO (Trocando Shards)
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxyHubDev/Gold/refs/heads/main/src/lib/load"))()
 local Lib = Library.new()
 
@@ -75,6 +75,12 @@ local function doExchange(shardToTrade)
         return false 
     end
     
+    -- CORRIGIDO: Definindo exchangeData corretamente
+    local exchangeData = {
+        Params = {shardToTrade, targetShard, 10},
+        Path = "shard-exchange/exchange"
+    }
+    
     local success, err = pcall(function()
         Event:FireServer({exchangeData})
     end)
@@ -82,8 +88,10 @@ local function doExchange(shardToTrade)
         totalCounts.trade = totalCounts.trade + 1
         print("✅ Trocou: " .. shardToTrade .. " → " .. targetShard .. " x10 (Total: " .. totalCounts.trade .. ")")
         return true
+    else
+        warn("❌ Erro ao trocar " .. shardToTrade .. ": " .. tostring(err))
+        return false
     end
-    return false
 end
 
 local function doCraft(craftData)
@@ -218,7 +226,6 @@ local function destroyAll()
     if isDestroyed then return end
     isDestroyed = true
     
-    -- Parar todos os loops
     states.trade = false
     states.craft = false
     states.boost = false
@@ -227,12 +234,10 @@ local function destroyAll()
     loops.craft = nil
     loops.boost = nil
     
-    -- Destruir a GUI
     if Window then
         Window:Destroy()
     end
     
-    -- Limpar variáveis
     selectedShardsList = {}
     totalCounts = { trade = 0, craft = 0, boost = 0 }
     
