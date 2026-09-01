@@ -1,4 +1,4 @@
--- Cofizin Utilities - CORRIGIDO (Trocando Shards)
+-- Cofizin Utilities - COM HEROPASSIVESHARD
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxyHubDev/Gold/refs/heads/main/src/lib/load"))()
 local Lib = Library.new()
 
@@ -7,6 +7,13 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local Event = RS:WaitForChild("Shared").Packages.Events.RemoteEvent
+
+-- ===== VERIFICAR SE JÁ EXISTE UMA INSTÂNCIA =====
+if _G.CofizinUtilitiesLoaded then
+    print("⚠️ Cofizin Utilities já está carregado!")
+    return
+end
+_G.CofizinUtilitiesLoaded = true
 
 -- ===== VARIÁVEIS =====
 local states = {
@@ -21,7 +28,7 @@ local totalCounts = {
     boost = 0
 }
 
--- ===== LISTA DE SHARDS =====
+-- ===== LISTA DE SHARDS (COM HEROPASSIVESHARD) =====
 local allShards = {
     "HakiFragment",
     "DoujutsuFragment",
@@ -29,7 +36,8 @@ local allShards = {
     "RaceFragment",
     "HunterFragment",
     "BlessingShard",
-    "FighterPassiveShard"
+    "FighterPassiveShard",
+    "HeroPassiveShard"
 }
 
 -- ===== SHARDS SELECIONADOS PARA TROCA =====
@@ -39,10 +47,11 @@ local selectedShardsList = {
     "AuraFragment",
     "RaceFragment",
     "HunterFragment",
-    "BlessingShard"
+    "BlessingShard",
+    "FighterPassiveShard"
 }
 
-local targetShard = "FighterPassiveShard"
+local targetShard = "HeroPassiveShard"
 
 -- ===== CRAFTS =====
 local crafts = {
@@ -75,7 +84,6 @@ local function doExchange(shardToTrade)
         return false 
     end
     
-    -- CORRIGIDO: Definindo exchangeData corretamente
     local exchangeData = {
         Params = {shardToTrade, targetShard, 10},
         Path = "shard-exchange/exchange"
@@ -240,6 +248,7 @@ local function destroyAll()
     
     selectedShardsList = {}
     totalCounts = { trade = 0, craft = 0, boost = 0 }
+    _G.CofizinUtilitiesLoaded = false
     
     print("🗑️ Cofizin Utilities destruído completamente!")
 end
@@ -274,6 +283,7 @@ local shardDropdown = TradeGroup:CreateDropdown({
         {Text = "HunterFragment"},
         {Text = "BlessingShard"},
         {Text = "FighterPassiveShard"},
+        {Text = "HeroPassiveShard"},
     },
     Multi = true,
     Placeholder = "Select Shards...",
@@ -284,7 +294,8 @@ local shardDropdown = TradeGroup:CreateDropdown({
         RaceFragment = true,
         HunterFragment = true,
         BlessingShard = true,
-        FighterPassiveShard = false,
+        FighterPassiveShard = true,
+        HeroPassiveShard = false,
     },
     Callback = function(values)
         if isDestroyed then return end
@@ -319,9 +330,10 @@ TradeGroup:CreateDropdown({
         {Text = "HunterFragment"},
         {Text = "BlessingShard"},
         {Text = "FighterPassiveShard"},
+        {Text = "HeroPassiveShard"},
     },
     Placeholder = "Select Target...",
-    Default = "FighterPassiveShard",
+    Default = "HeroPassiveShard",
     Callback = function(value)
         if isDestroyed then return end
         targetShard = value
@@ -354,7 +366,7 @@ TradeGroup:CreateParagraph({
     Icon = "rbxassetid://126986895855002",
 })
 
--- ===== AUTO CRAFT E BOOST (LADO DIREITO) =====
+-- ===== AUTO CRAFT (LADO DIREITO) =====
 local CraftGroup = MainTab:CreateGroup({ Title = "Auto Craftables", Side = 2 })
 
 CraftGroup:CreateToggle({
@@ -373,6 +385,7 @@ CraftGroup:CreateParagraph({
     Icon = "rbxassetid://126986895855002",
 })
 
+-- ===== AUTO BOOST (LADO DIREITO) =====
 local BoostGroup = MainTab:CreateGroup({ Title = "Auto Boost Guild", Side = 2 })
 
 BoostGroup:CreateToggle({
@@ -446,7 +459,16 @@ task.spawn(function()
     end
 end)
 
+-- ===== LIMPEZA QUANDO O JOGADOR SAIR =====
+LocalPlayer:GetPropertyChangedSignal("Parent"):Connect(function()
+    if not LocalPlayer.Parent then
+        destroyAll()
+    end
+end)
+
 print("✅ Cofizin Utilities carregado!")
+print("📦 Shards disponíveis: Haki, Doujutsu, Aura, Race, Hunter, Blessing, FighterPassive, HeroPassive")
 print("📦 APENAS os shards marcados serão trocados")
 print("🎯 O shard destino NÃO será trocado")
 print("🗑️ Clique em 'Close GUI' para destruir completamente")
+print("🔒 Script protegido contra duplicação")
