@@ -1,4 +1,4 @@
--- Cofizin Utilities - COM HEROPASSIVESHARD
+-- Cofizin Utilities - COM AUTO BUY POTIONS MERCHANT
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxyHubDev/Gold/refs/heads/main/src/lib/load"))()
 local Lib = Library.new()
 
@@ -19,13 +19,15 @@ _G.CofizinUtilitiesLoaded = true
 local states = {
     trade = false,
     craft = false,
-    boost = false
+    boost = false,
+    potion = false
 }
 
 local totalCounts = {
     trade = 0,
     craft = 0,
-    boost = 0
+    boost = 0,
+    potion = 0
 }
 
 -- ===== LISTA DE SHARDS (COM HEROPASSIVESHARD) =====
@@ -62,8 +64,24 @@ local crafts = {
 
 local boost = {Params = {"Power"}, Path = "guild/purchaseBoost"}
 
+-- ===== POTIONS MERCHANT =====
+local potions = {
+    "PotionPower",
+    "PotionDamage",
+    "PotionLucky",
+    "PotionCoin"
+}
+
+-- ===== POTIONS SELECIONADAS =====
+local selectedPotions = {
+    PotionPower = false,
+    PotionDamage = false,
+    PotionLucky = false,
+    PotionCoin = false
+}
+
 -- ===== LOOPS =====
-local loops = { trade = nil, craft = nil, boost = nil }
+local loops = { trade = nil, craft = nil, boost = nil, potion = nil }
 local isDestroyed = false
 
 -- ===== FUNÇÃO PARA VERIFICAR SE UM SHARD ESTÁ SELECIONADO =====
@@ -126,6 +144,29 @@ local function doBoost()
         return true
     end
     return false
+end
+
+-- ===== FUNÇÃO PARA COMPRAR POÇÃO =====
+local function doBuyPotion(potionName)
+    if isDestroyed then return false end
+    if not selectedPotions[potionName] then return false end
+    
+    local potionData = {
+        Params = {potionName, 1},
+        Path = "merchant/purchase"
+    }
+    
+    local success, err = pcall(function()
+        Event:FireServer({potionData})
+    end)
+    if success then
+        totalCounts.potion = totalCounts.potion + 1
+        print("✅ Comprou: " .. potionName .. " (Total: " .. totalCounts.potion .. ")")
+        return true
+    else
+        warn("❌ Erro ao comprar " .. potionName .. ": " .. tostring(err))
+        return false
+    end
 end
 
 -- ===== LOOPS =====
@@ -209,6 +250,69 @@ local function stopBoostLoop()
     loops.boost = nil
 end
 
+-- ===== LOOP DE COMPRA DE POÇÕES =====
+local function startPotionLoop()
+    if isDestroyed then return end
+    if loops.potion then return end
+    states.potion = true
+    
+    -- Verificar se alguma poção está selecionada
+    local hasSelected = false
+    for _, active in pairs(selectedPotions) do
+        if active then hasSelected = true; break end
+    end
+    
+    if not hasSelected then
+        print("⚠️ Nenhuma poção selecionada para comprar!")
+        states.potion = false
+        return
+    end
+    
+    print("🧪 Comprando poções selecionadas (1x/seg)")
+    
+    loops.potion = coroutine.create(function()
+        local potionIndex = 1
+        local potionKeys = {"PotionPower", "PotionDamage", "PotionLucky", "PotionCoin"}
+        
+        while states.potion and not isDestroyed do
+            -- Verificar se alguma poção está ativa
+            local hasActive = false
+            for _, key in ipairs(potionKeys) do
+                if selectedPotions[key] then
+                    hasActive = true
+                    break
+                end
+            end
+            
+            if not hasActive then
+                print("⚠️ Nenhuma poção ativa, parando loop")
+                states.potion = false
+                break
+            end
+            
+            -- Pegar a poção atual e verificar se está ativa
+            local currentPotion = potionKeys[potionIndex]
+            if selectedPotions[currentPotion] then
+                doBuyPotion(currentPotion)
+            end
+            
+            -- Avançar para a próxima poção
+            potionIndex = potionIndex + 1
+            if potionIndex > #potionKeys then
+                potionIndex = 1
+            end
+            
+            task.wait(1)
+        end
+    end)
+    coroutine.resume(loops.potion)
+end
+
+local function stopPotionLoop()
+    states.potion = false
+    loops.potion = nil
+end
+
 -- ===== TOGGLES =====
 local function toggleTrade()
     if isDestroyed then return end
@@ -229,6 +333,15 @@ local function toggleBoost()
     if states.boost then stopBoostLoop() else startBoostLoop() end
 end
 
+local function togglePotion()
+    if isDestroyed then return end
+    if states.potion then 
+        stopPotionLoop() 
+    else 
+        startPotionLoop() 
+    end
+end
+
 -- ===== FUNÇÃO DE DESTROY COMPLETO =====
 local function destroyAll()
     if isDestroyed then return end
@@ -237,17 +350,20 @@ local function destroyAll()
     states.trade = false
     states.craft = false
     states.boost = false
+    states.potion = false
     
     loops.trade = nil
     loops.craft = nil
     loops.boost = nil
+    loops.potion = nil
     
     if Window then
         Window:Destroy()
     end
     
     selectedShardsList = {}
-    totalCounts = { trade = 0, craft = 0, boost = 0 }
+    selectedPotions = {PotionPower = false, PotionDamage = false, PotionLucky = false, PotionCoin = false}
+    totalCounts = { trade = 0, craft = 0, boost = 0, potion = 0 }
     _G.CofizinUtilitiesLoaded = false
     
     print("🗑️ Cofizin Utilities destruído completamente!")
@@ -404,6 +520,57 @@ BoostGroup:CreateParagraph({
     Icon = "rbxassetid://126986895855002",
 })
 
+-- ===== AUTO BUY POTIONS (LADO ESQUERDO, ABAIXO DO TRADE) =====
+local PotionGroup = MainTab:CreateGroup({ Title = "Auto Buy Potions", Side = 1 })
+
+-- Dropdown para selecionar poções
+PotionGroup:CreateDropdown({
+    Title = "Select Potions to Buy",
+    Description = "Choose which potions will be purchased",
+    SaveId = "buy_potions",
+    Options = {
+        {Text = "PotionPower", Description = "Power Potion"},
+        {Text = "PotionDamage", Description = "Damage Potion"},
+        {Text = "PotionLucky", Description = "Lucky Potion"},
+        {Text = "PotionCoin", Description = "Coin Potion"},
+    },
+    Multi = true,
+    Placeholder = "Select Potions...",
+    Default = {
+        PotionPower = false,
+        PotionDamage = false,
+        PotionLucky = false,
+        PotionCoin = false,
+    },
+    Callback = function(values)
+        if isDestroyed then return end
+        for potionName, isSelected in pairs(values) do
+            selectedPotions[potionName] = isSelected
+        end
+        print("🧪 Poções selecionadas:", selectedPotions)
+        if states.potion then
+            stopPotionLoop()
+            startPotionLoop()
+        end
+    end,
+})
+
+PotionGroup:CreateToggle({
+    Title = "Auto Buy Potions",
+    Description = "Buy selected potions (1x/sec each)",
+    SaveId = "auto_potion",
+    Default = false,
+    Callback = function(value)
+        togglePotion()
+    end,
+})
+
+PotionGroup:CreateParagraph({
+    Title = "Total Potions Bought",
+    Content = "0",
+    Icon = "rbxassetid://126986895855002",
+})
+
 -- ===== TAB 2: INFO =====
 local InfoTab = Window:CreateTab({
     Title = "Info",
@@ -416,7 +583,7 @@ local InfoGroup = InfoTab:CreateGroup({ Title = "About", Side = 1 })
 
 InfoGroup:CreateParagraph({
     Title = "Cofizin Utilities",
-    Content = "Auto Trade Shard\nAuto Craftables\nAuto Boost Guild\n\nAPENAS os shards marcados serão trocados!",
+    Content = "Auto Trade Shard\nAuto Craftables\nAuto Boost Guild\nAuto Buy Potions\n\nAPENAS os shards marcados serão trocados!",
 })
 
 InfoGroup:CreateButton({
@@ -454,6 +621,13 @@ task.spawn(function()
                         end
                     end
                 end
+                if child:IsA("Group") and child.Title == "Auto Buy Potions" then
+                    for _, p in pairs(child:GetChildren()) do
+                        if p:IsA("Paragraph") and p.Title == "Total Potions Bought" then
+                            p:SetContent(tostring(totalCounts.potion))
+                        end
+                    end
+                end
             end
         end)
     end
@@ -470,5 +644,7 @@ print("✅ Cofizin Utilities carregado!")
 print("📦 Shards disponíveis: Haki, Doujutsu, Aura, Race, Hunter, Blessing, FighterPassive, HeroPassive")
 print("📦 APENAS os shards marcados serão trocados")
 print("🎯 O shard destino NÃO será trocado")
+print("🧪 Poções disponíveis: Power, Damage, Lucky, Coin")
+print("🧪 Selecione as poções que deseja comprar")
 print("🗑️ Clique em 'Close GUI' para destruir completamente")
 print("🔒 Script protegido contra duplicação")
