@@ -69,7 +69,7 @@ local potions = {
     "PotionPower",
     "PotionDamage",
     "PotionLucky",
-    "PotionCoin"
+    "PotionCoins"
 }
 
 -- ===== POTIONS SELECIONADAS =====
