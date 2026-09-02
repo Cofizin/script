@@ -1,4 +1,4 @@
--- Cofizin Utilities - COM AUTO BUY POTIONS MERCHANT
+-- Cofizin Utilities - COM AUTO BUY POTIONS MERCHANT (CORRIGIDO)
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/ProxyHubDev/Gold/refs/heads/main/src/lib/load"))()
 local Lib = Library.new()
 
@@ -77,7 +77,7 @@ local selectedPotions = {
     PotionPower = false,
     PotionDamage = false,
     PotionLucky = false,
-    PotionCoin = false
+    PotionCoins = false
 }
 
 -- ===== LOOPS =====
@@ -272,7 +272,7 @@ local function startPotionLoop()
     
     loops.potion = coroutine.create(function()
         local potionIndex = 1
-        local potionKeys = {"PotionPower", "PotionDamage", "PotionLucky", "PotionCoin"}
+        local potionKeys = {"PotionPower", "PotionDamage", "PotionLucky", "PotionCoins"}
         
         while states.potion and not isDestroyed do
             -- Verificar se alguma poção está ativa
@@ -362,7 +362,7 @@ local function destroyAll()
     end
     
     selectedShardsList = {}
-    selectedPotions = {PotionPower = false, PotionDamage = false, PotionLucky = false, PotionCoin = false}
+    selectedPotions = {PotionPower = false, PotionDamage = false, PotionLucky = false, PotionCoins = false}
     totalCounts = { trade = 0, craft = 0, boost = 0, potion = 0 }
     _G.CofizinUtilitiesLoaded = false
     
@@ -532,7 +532,7 @@ PotionGroup:CreateDropdown({
         {Text = "PotionPower", Description = "Power Potion"},
         {Text = "PotionDamage", Description = "Damage Potion"},
         {Text = "PotionLucky", Description = "Lucky Potion"},
-        {Text = "PotionCoin", Description = "Coin Potion"},
+        {Text = "PotionCoins", Description = "Coins Potion"},
     },
     Multi = true,
     Placeholder = "Select Potions...",
@@ -540,7 +540,7 @@ PotionGroup:CreateDropdown({
         PotionPower = false,
         PotionDamage = false,
         PotionLucky = false,
-        PotionCoin = false,
+        PotionCoins = false,
     },
     Callback = function(values)
         if isDestroyed then return end
@@ -644,7 +644,7 @@ print("✅ Cofizin Utilities carregado!")
 print("📦 Shards disponíveis: Haki, Doujutsu, Aura, Race, Hunter, Blessing, FighterPassive, HeroPassive")
 print("📦 APENAS os shards marcados serão trocados")
 print("🎯 O shard destino NÃO será trocado")
-print("🧪 Poções disponíveis: Power, Damage, Lucky, Coin")
+print("🧪 Poções disponíveis: Power, Damage, Lucky, Coins")
 print("🧪 Selecione as poções que deseja comprar")
 print("🗑️ Clique em 'Close GUI' para destruir completamente")
 print("🔒 Script protegido contra duplicação")
