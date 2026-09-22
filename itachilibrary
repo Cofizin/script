@@ -289,7 +289,7 @@ function Library:CreateWindow(options)
 	title.Size = UDim2.new(1, 0, 0, 30)
 	title.BackgroundTransparency = 1
 	title.FontFace = Ubuntu
-	title.Text = options.Title or "Foccus.gg"
+	title.Text = options.Title or "Itachi Hub"
 	title.TextColor3 = Color3.new(1, 1, 1)
 	title.TextSize = 25
 	title.TextXAlignment = Enum.TextXAlignment.Center
@@ -2037,9 +2037,9 @@ local function animate(object,duration,properties,style)
  return tween
 end
 local window = Library:CreateWindow({
-    Title = "Foccus.gg",
+    Title = "Itachi Hub",
     Loading = config.Loading ~= false,
-    LoadingTitle = config.LoadingTitle or "Foccus.gg",
+    LoadingTitle = config.LoadingTitle or "Itachi Hub",
     LoadingDescription = config.LoadingDescription,
     LoadingEyebrow = config.LoadingEyebrow,
     LoadingStatus = config.LoadingStatus,
@@ -2130,7 +2130,7 @@ for index,data in ipairs({{"Reload",Color3.fromRGB(111,179,124)},{"Minimize",Col
 end
 local headerTitle=make("TextLabel",frame,{
  Name="HeaderTitle",AnchorPoint=Vector2.new(.5,0),Position=UDim2.new(.5,31,0,11),Size=UDim2.fromOffset(320,24),
- BackgroundTransparency=1,Text=tostring(config.Title or "Foccus.gg"),Font=Enum.Font.Roboto,TextSize=18,
+ BackgroundTransparency=1,Text=tostring(config.Title or "Itachi Hub"),Font=Enum.Font.Roboto,TextSize=18,
  TextColor3=Theme.White,TextTransparency=1,TextXAlignment=Enum.TextXAlignment.Center,ZIndex=10,
 })
 local headerDescription=make("TextLabel",frame,{
@@ -2519,7 +2519,7 @@ frame.HeaderActions.Close.Activated:Connect(function()
  local dialog=make("Frame",layer,{Name="Dialog",AnchorPoint=Vector2.new(.5,.5),Position=frame.Position,Size=UDim2.fromOffset(420,166),BackgroundColor3=Theme.Card,BorderSizePixel=0,ZIndex=110})
  make("UICorner",dialog,{CornerRadius=UDim.new(0,12)})
  local scale=make("UIScale",dialog,{Scale=frame.ResponsiveScale.Scale})
- make("TextLabel",dialog,{Name="Message",Position=UDim2.fromOffset(26,24),Size=UDim2.new(1,-52,0,65),Text="You want to close Foccus.gg completely, this will terminate the functions.",TextWrapped=true,Font=Enum.Font.GothamMedium,TextSize=15,TextColor3=Theme.White,BackgroundTransparency=1,ZIndex=111})
+ make("TextLabel",dialog,{Name="Message",Position=UDim2.fromOffset(26,24),Size=UDim2.new(1,-52,0,65),Text="You want to close Itachi Hub completely, this will terminate the functions.",TextWrapped=true,Font=Enum.Font.GothamMedium,TextSize=15,TextColor3=Theme.White,BackgroundTransparency=1,ZIndex=111})
  local function choice(text,x)
   local gold = text == "Yes"
   local b=make("TextButton",dialog,{Name=text,Position=UDim2.fromOffset(x,111),Size=UDim2.fromOffset(172,34),Text=text,Font=Enum.Font.GothamMedium,TextSize=14,TextColor3=gold and Theme.Black or Theme.White,BackgroundColor3=gold and Theme.Gold or Theme.Steel,BorderSizePixel=0,AutoButtonColor=false,ZIndex=112})
